@@ -16,6 +16,13 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is missing from backend/.env")
 
+# Normalize URL for SQLAlchemy 2.0 + psycopg compatibility
+# Handles postgres:// or postgresql:// without explicit dialect
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
 APP_NAME = os.getenv("APP_NAME", "AEGIS AI API")
 APP_ENV = os.getenv("APP_ENV", "development")
 API_V1_PREFIX = os.getenv("API_V1_PREFIX", "/api")

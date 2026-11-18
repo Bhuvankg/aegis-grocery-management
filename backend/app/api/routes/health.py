@@ -14,5 +14,8 @@ def health():
 
 @router.get("/health/database")
 def database_health(db: Session = Depends(get_db)):
-    db.execute(text("SELECT 1"))
-    return {"success": True, "database": "connected"}
+    try:
+        db.execute(text("SELECT 1"))
+        return {"success": True, "database": "connected"}
+    except Exception as e:
+        return {"success": False, "database": "error", "error_type": type(e).__name__, "detail": str(e)}
