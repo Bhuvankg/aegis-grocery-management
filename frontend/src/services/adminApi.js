@@ -153,3 +153,37 @@ export async function fetchStoreAnalytics() {
   if (!response.ok) throw new Error("Failed to fetch store analytics");
   return response.json();
 }
+
+
+// ── Sales History & Tracing ──
+
+export async function fetchSalesHistory({ page = 1, pageSize = 25, dateFrom = null, dateTo = null } = {}) {
+  const params = new URLSearchParams({ page, page_size: pageSize });
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+
+  const response = await fetch(`${API_BASE_URL}/admin/sales/history?${params}`, {
+    headers: { ...authHeader() },
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("Unauthorized");
+    throw new Error("Failed to fetch sales history");
+  }
+  return response.json();
+}
+
+export async function fetchDailySalesSummary(days = 30) {
+  const response = await fetch(`${API_BASE_URL}/admin/sales/daily-summary?days=${days}`, {
+    headers: { ...authHeader() },
+  });
+  if (!response.ok) throw new Error("Failed to fetch daily sales summary");
+  return response.json();
+}
+
+export async function fetchProductSales(productId) {
+  const response = await fetch(`${API_BASE_URL}/admin/sales/product/${productId}`, {
+    headers: { ...authHeader() },
+  });
+  if (!response.ok) throw new Error("Failed to fetch product sales");
+  return response.json();
+}

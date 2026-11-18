@@ -1799,3 +1799,71 @@ footer { border-top: 1px solid #e7eee7; padding: 23px 0; display: flex; justify-
 @media(max-width: 900px) {
   .analytics-details-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TAB 5: SALES HISTORY & TRACING
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.admin-sales-view { animation: fadeIn 0.3s; }
+
+.profit-positive { color: #1b7a42; }
+.profit-negative { color: #c73e3e; }
+
+.expanded-detail-row td {
+  padding: 0 !important;
+  background: #f4f8f5 !important;
+}
+
+.sale-detail-expanded {
+  padding: 14px 20px 18px;
+  border-top: 2px solid #d6e8d9;
+}
+
+.detail-inner-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.detail-inner-table th {
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6a7c6e;
+  border-bottom: 1px solid #d6e8d9;
+  background: transparent;
+}
+.detail-inner-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #eef4ee;
+}
+
+.delivery-fee-note {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: #6a7c6e;
+  font-style: italic;
+}
+
+.sales-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid #e7eee7;
+  margin-top: 4px;
+}
+
+.pagination-info {
+  font-size: 0.82rem;
+  color: #6a7c6e;
+  font-weight: 500;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

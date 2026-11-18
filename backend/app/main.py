@@ -19,6 +19,7 @@ from app.api.routes.admin_orders import router as admin_orders_router
 from app.api.routes.payments import router as payments_router
 from app.api.routes.ai_analytics import router as ai_analytics_router
 from app.api.routes.admin_analytics import router as admin_analytics_router
+from app.api.routes.admin_sales import router as admin_sales_router
 from app.core.config import (
     APP_NAME,
     API_V1_PREFIX,
@@ -68,6 +69,7 @@ app.include_router(admin_orders_router, prefix=API_V1_PREFIX)
 app.include_router(payments_router, prefix=API_V1_PREFIX)
 app.include_router(ai_analytics_router, prefix=API_V1_PREFIX)
 app.include_router(admin_analytics_router, prefix=API_V1_PREFIX)
+app.include_router(admin_sales_router, prefix=API_V1_PREFIX)
 
 
 if __name__ == "__main__":

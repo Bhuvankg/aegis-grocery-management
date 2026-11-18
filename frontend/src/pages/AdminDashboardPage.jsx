@@ -4,7 +4,8 @@ import {
   Shield, LogOut, Plus, Search, RefreshCw, Package,
   AlertTriangle, Tag, CheckCircle2, X, ShoppingBag,
   Sparkles, TrendingUp, AlertCircle, Info, Calendar,
-  BarChart3, DollarSign, PieChart
+  BarChart3, DollarSign, PieChart, Receipt, ArrowUpDown,
+  Filter, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { getStoredAdmin, isAuthenticated, logoutAdmin } from "../services/auth";
 import {
@@ -19,13 +20,15 @@ import {
   fetchAiRecommendations,
   fetchAiExpiryAlerts,
   fetchStoreAnalytics,
+  fetchSalesHistory,
+  fetchDailySalesSummary,
 } from "../services/adminApi";
 import { fetchCategories } from "../services/api";
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
   const [admin, setAdmin] = useState(null);
-  const [activeTab, setActiveTab] = useState("products"); // 'products' | 'orders' | 'ai' | 'analytics'
+  const [activeTab, setActiveTab] = useState("products"); // 'products' | 'orders' | 'ai' | 'analytics' | 'sales'
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -33,6 +36,12 @@ export default function AdminDashboardPage() {
   const [recommendations, setRecommendations] = useState([]);
   const [expiryAlerts, setExpiryAlerts] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [salesData, setSalesData] = useState(null);
+  const [dailySummary, setDailySummary] = useState(null);
+  const [salesPage, setSalesPage] = useState(1);
+  const [salesDateFrom, setSalesDateFrom] = useState("");
+  const [salesDateTo, setSalesDateTo] = useState("");
+  const [expandedSaleId, setExpandedSaleId] = useState(null);
   const [selectedAiProdId, setSelectedAiProdId] = useState("");
 
   const [loading, setLoading] = useState(true);
@@ -75,6 +84,18 @@ export default function AdminDashboardPage() {
       } else if (activeTab === "analytics") {
         const analyticsData = await fetchStoreAnalytics();
         setAnalytics(analyticsData);
+      } else if (activeTab === "sales") {
+        const [historyData, dailyData] = await Promise.all([
+          fetchSalesHistory({
+            page: salesPage,
+            pageSize: 25,
+            dateFrom: salesDateFrom || null,
+            dateTo: salesDateTo || null,
+          }),
+          fetchDailySalesSummary(30),
+        ]);
+        setSalesData(historyData);
+        setDailySummary(dailyData);
       }
     } catch (err) {
       if (err.message === "Unauthorized") {
@@ -84,7 +105,7 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, search, selectedCategory, orderStatusFilter, selectedAiProdId, navigate]);
+  }, [activeTab, search, selectedCategory, orderStatusFilter, selectedAiProdId, salesPage, salesDateFrom, salesDateTo, navigate]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -233,6 +254,12 @@ export default function AdminDashboardPage() {
           onClick={() => setActiveTab("analytics")}
         >
           <BarChart3 size={16} /> Sales & Margin Analytics
+        </button>
+        <button
+          className={`tab-btn ${activeTab === "sales" ? "active" : ""}`}
+          onClick={() => { setSalesPage(1); setActiveTab("sales"); }}
+        >
+          <Receipt size={16} /> Sales History & Tracing
         </button>
       </div>
 
@@ -740,6 +767,252 @@ export default function AdminDashboardPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* TAB 5: SALES HISTORY & TRACING */}
+      {activeTab === "sales" && (
+        <div className="admin-sales-view">
+          {/* Daily Summary KPIs */}
+          {dailySummary && (
+            <div className="admin-kpi-grid">
+              <div className="kpi-card">
+                <div className="kpi-icon-wrap green"><DollarSign size={22} /></div>
+                <div>
+                  <span className="kpi-label">30-Day Revenue</span>
+                  <div className="kpi-value">₹{dailySummary.totals.revenue.toFixed(2)}</div>
+                  <span className="kpi-subtext">{dailySummary.totals.total_orders} orders completed</span>
+                </div>
+              </div>
+              <div className="kpi-card">
+                <div className="kpi-icon-wrap blue"><TrendingUp size={22} /></div>
+                <div>
+                  <span className="kpi-label">30-Day Gross Profit</span>
+                  <div className="kpi-value">₹{dailySummary.totals.profit.toFixed(2)}</div>
+                  <span className="kpi-subtext">Margin: <strong>{dailySummary.totals.overall_margin_pct}%</strong></span>
+                </div>
+              </div>
+              <div className="kpi-card">
+                <div className="kpi-icon-wrap amber"><ShoppingBag size={22} /></div>
+                <div>
+                  <span className="kpi-label">Avg Order Value</span>
+                  <div className="kpi-value">₹{dailySummary.totals.avg_order_value.toFixed(2)}</div>
+                  <span className="kpi-subtext">{dailySummary.totals.total_units_sold} units sold</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Daily Revenue Trend Chart */}
+          {dailySummary && dailySummary.daily.length > 0 && (
+            <div className="ai-section-card">
+              <div className="ai-section-header">
+                <div className="ai-section-title">
+                  <BarChart3 size={20} className="icon-green" />
+                  <h3>Daily Revenue Trend (Last 30 Days)</h3>
+                </div>
+              </div>
+              <div className="fc-chart-container" style={{ overflowX: "auto" }}>
+                <div className="fc-chart-bars" style={{ minWidth: dailySummary.daily.length * 36 }}>
+                  {dailySummary.daily.map((day) => {
+                    const maxVal = Math.max(...dailySummary.daily.map(d => d.revenue), 100);
+                    const barHeight = Math.max(8, (day.revenue / maxVal) * 80);
+                    return (
+                      <div key={day.date} className="fc-bar-column" title={`${day.date}: ₹${day.revenue.toFixed(0)} revenue, ₹${day.profit.toFixed(0)} profit, ${day.order_count} orders`}>
+                        <span className="bar-val">₹{day.revenue >= 1000 ? (day.revenue / 1000).toFixed(1) + "k" : day.revenue.toFixed(0)}</span>
+                        <div className="bar-fill" style={{ height: `${barHeight}px` }} />
+                        <span className="bar-day">{day.day_of_week}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sales Ledger Filters */}
+          <div className="ai-section-card">
+            <div className="ai-section-header">
+              <div className="ai-section-title">
+                <Receipt size={20} className="icon-blue" />
+                <h3>Sales Transaction Ledger</h3>
+              </div>
+              <button className="admin-refresh-btn" onClick={loadData} title="Refresh Sales Data">
+                <RefreshCw size={14} /> Refresh
+              </button>
+            </div>
+
+            <div className="admin-toolbar" style={{ gap: "0.6rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <Filter size={14} />
+                <label style={{ fontSize: "0.82rem", fontWeight: 600 }}>From:</label>
+                <input
+                  type="date"
+                  className="admin-select"
+                  value={salesDateFrom}
+                  onChange={(e) => { setSalesDateFrom(e.target.value); setSalesPage(1); }}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <label style={{ fontSize: "0.82rem", fontWeight: 600 }}>To:</label>
+                <input
+                  type="date"
+                  className="admin-select"
+                  value={salesDateTo}
+                  onChange={(e) => { setSalesDateTo(e.target.value); setSalesPage(1); }}
+                />
+              </div>
+              {(salesDateFrom || salesDateTo) && (
+                <button
+                  className="admin-refresh-btn"
+                  onClick={() => { setSalesDateFrom(""); setSalesDateTo(""); setSalesPage(1); }}
+                  title="Clear date filter"
+                >
+                  <X size={14} /> Clear
+                </button>
+              )}
+            </div>
+
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Revenue</th>
+                    <th>COGS</th>
+                    <th>Profit</th>
+                    <th>Margin</th>
+                    <th>Payment</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan="10" className="table-loading">Loading sales records…</td></tr>
+                  ) : !salesData || salesData.sales.length === 0 ? (
+                    <tr><td colSpan="10" className="table-empty">No sales transactions found for this period.</td></tr>
+                  ) : (
+                    salesData.sales.map((sale) => (
+                      <>
+                        <tr key={sale.order_id} className={sale.gross_profit < 0 ? "row-urgent" : ""}>
+                          <td>
+                            <div className="order-time-sub">
+                              {new Date(sale.created_at).toLocaleDateString()}
+                              <br />
+                              {new Date(sale.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          </td>
+                          <td><strong>{sale.order_number}</strong></td>
+                          <td>
+                            <strong>{sale.customer_name}</strong>
+                            {sale.customer_phone && <div className="order-contact-sub">{sale.customer_phone}</div>}
+                          </td>
+                          <td>{sale.item_count} item{sale.item_count !== 1 ? "s" : ""}</td>
+                          <td><strong>₹{sale.total_amount.toFixed(2)}</strong></td>
+                          <td className="cost-cell">₹{sale.cogs.toFixed(2)}</td>
+                          <td>
+                            <strong className={sale.gross_profit >= 0 ? "profit-positive" : "profit-negative"}>
+                              ₹{sale.gross_profit.toFixed(2)}
+                            </strong>
+                          </td>
+                          <td>
+                            <span className={`margin-badge ${sale.gross_margin_pct >= 25 ? "high" : "normal"}`}>
+                              {sale.gross_margin_pct}%
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`status-pill ${sale.payment_method === "cash_on_delivery" ? "pending" : "confirmed"}`}>
+                              {sale.payment_method === "cash_on_delivery" ? "COD" : "Online"}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              className="toggle-status-btn"
+                              onClick={() => setExpandedSaleId(expandedSaleId === sale.order_id ? null : sale.order_id)}
+                            >
+                              {expandedSaleId === sale.order_id ? "Hide" : "View"}
+                            </button>
+                          </td>
+                        </tr>
+
+                        {/* Expanded line-item detail row */}
+                        {expandedSaleId === sale.order_id && (
+                          <tr key={`detail-${sale.order_id}`} className="expanded-detail-row">
+                            <td colSpan="10">
+                              <div className="sale-detail-expanded">
+                                <table className="detail-inner-table">
+                                  <thead>
+                                    <tr>
+                                      <th>Product</th>
+                                      <th>Qty</th>
+                                      <th>Unit Price</th>
+                                      <th>Line Total</th>
+                                      <th>Unit Cost</th>
+                                      <th>COGS</th>
+                                      <th>Line Profit</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {sale.items.map((item, idx) => (
+                                      <tr key={idx}>
+                                        <td><strong>{item.product_name}</strong></td>
+                                        <td>{item.quantity}</td>
+                                        <td>₹{item.unit_price.toFixed(2)}</td>
+                                        <td>₹{item.line_total.toFixed(2)}</td>
+                                        <td className="cost-cell">₹{item.unit_cost.toFixed(2)}</td>
+                                        <td className="cost-cell">₹{item.item_cogs.toFixed(2)}</td>
+                                        <td>
+                                          <strong className={item.item_profit >= 0 ? "profit-positive" : "profit-negative"}>
+                                            ₹{item.item_profit.toFixed(2)}
+                                          </strong>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                                {sale.delivery_fee > 0 && (
+                                  <div className="delivery-fee-note">
+                                    Delivery fee charged: ₹{sale.delivery_fee.toFixed(2)}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {salesData && salesData.total_count > 25 && (
+              <div className="sales-pagination">
+                <button
+                  className="admin-refresh-btn"
+                  disabled={salesPage <= 1}
+                  onClick={() => setSalesPage(p => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft size={14} /> Previous
+                </button>
+                <span className="pagination-info">
+                  Page {salesData.page} of {Math.ceil(salesData.total_count / salesData.page_size)}
+                  &nbsp;({salesData.total_count} total transactions)
+                </span>
+                <button
+                  className="admin-refresh-btn"
+                  disabled={salesPage >= Math.ceil(salesData.total_count / salesData.page_size)}
+                  onClick={() => setSalesPage(p => p + 1)}
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

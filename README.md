@@ -146,3 +146,6 @@ Tests cover:
 | `GET` | `/api/admin/ai/restock-recommendations` | Admin | Sales velocity & days-of-supply alerts |
 | `GET` | `/api/admin/ai/expiry-alerts` | Admin | Perishable shelf-life monitoring |
 | `GET` | `/api/admin/analytics/summary` | Admin | Executive summary: revenue, profit margins, inventory valuation |
+| `GET` | `/api/admin/sales/history` | Admin | Chronological sales ledger with COGS, gross profit & item breakdown |
+| `GET` | `/api/admin/sales/daily-summary` | Admin | Daily revenue & profit time-series aggregation for trend charts |
+| `GET` | `/api/admin/sales/product/{id}` | Admin | Per-product lifetime units, revenue, COGS, and daily breakdown |
